@@ -14,6 +14,7 @@
 #include <score/tools/SafeCast.hpp>
 
 #include <QPainter>
+#include <QtMath>
 
 #if defined(near)
 #undef near
@@ -610,7 +611,7 @@ public:
     QShader viewspaceVS, viewspaceFS;
     QShader barycentricVS, barycentricFS;
     QShader colorVS, colorFS;
-  } triangle_perspective, point_perspective, triangle_fulldome, point_fulldome;
+  } triangle_perspective, point_perspective, triangle_fulldome, point_fulldome, triangle_orthographic, point_orthographic;
 
   int64_t meshChangedIndex{-1};
   int m_curShader{0};
@@ -879,6 +880,9 @@ private:
           case 1:
             initPasses_impl(renderer, mesh, triangle_fulldome);
             break;
+          case 2:
+            initPasses_impl(renderer, mesh, triangle_orthographic);
+            break;
         }
         break;
       case 1:
@@ -889,6 +893,9 @@ private:
             break;
           case 1:
             initPasses_impl(renderer, mesh, point_fulldome);
+            break;
+          case 2:
+            initPasses_impl(renderer, mesh, point_orthographic);
             break;
         }
         break;
@@ -1029,6 +1036,15 @@ private:
     createShaders(
         this->point_fulldome, renderer, vtx_output_point, vtx_output_process_point,
         vtx_projection_fulldome, mesh);
+
+    // Orthographic uses the same vertex shader as perspective
+    // (projection is computed on CPU and passed via UBO)
+    createShaders(
+        this->triangle_orthographic, renderer, vtx_output_triangle,
+        vtx_output_process_triangle, vtx_projection_perspective, mesh);
+    createShaders(
+        this->point_orthographic, renderer, vtx_output_point, vtx_output_process_point,
+        vtx_projection_perspective, mesh);
   }
 
   void recreateRenderTarget(RenderList& renderer)
@@ -1098,11 +1114,29 @@ private:
       QMatrix4x4 projection;
       // FIXME should use the size of the target instead
       // Since we can render on multiple target, this means that we must have one UBO for each
-      projection.perspective(
-          n.fov,
-          qreal(renderer.state.renderSize.width()) / renderer.state.renderSize.height(),
-          n.near,
-          n.far);
+      qreal aspect = qreal(renderer.state.renderSize.width()) / renderer.state.renderSize.height();
+
+      if(n.camera_mode == 2) // Orthographic
+      {
+        // Calculate ortho size to match perspective FOV at the focus distance
+        QVector3D camPos{n.position[0], n.position[1], n.position[2]};
+        QVector3D centerPos{n.center[0], n.center[1], n.center[2]};
+        qreal distance = (camPos - centerPos).length();
+
+        // Convert FOV (degrees) to ortho half-height at the focus distance
+        qreal fovRad = qDegreesToRadians(n.fov);
+        //qreal orthoSize = distance * std::tan(fovRad * 0.5) * 3.75;
+        //multiple by 5 for better visual match with perspective
+        qreal orthoSize = distance * std::tan(fovRad * 0.5) * 5;
+
+        qreal halfWidth = orthoSize * aspect;
+        qreal halfHeight = orthoSize;
+        projection.ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, n.near, n.far);
+      }
+      else // Perspective or Fulldome
+      {
+        projection.perspective(n.fov, aspect, n.near, n.far);
+      }
       QMatrix4x4 view;
 
       view.lookAt(

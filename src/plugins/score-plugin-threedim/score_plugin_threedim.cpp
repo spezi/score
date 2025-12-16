@@ -19,6 +19,10 @@
 #include <Threedim/Primitive.hpp>
 #include <Threedim/StructureSynth.hpp>
 
+#if defined(SCORE_HAS_SH4LT)
+#include <Threedim/Sh4ltMeshLoader.hpp>
+#endif
+
 #include <score_plugin_engine.hpp>
 
 namespace Threedim
@@ -182,6 +186,9 @@ std::vector<score::InterfaceBase*> score_plugin_threedim::factories(
   oscr::instantiate_fx<Threedim::Cone>(fx, ctx, key);
   oscr::instantiate_fx<Threedim::Torus>(fx, ctx, key);
   oscr::instantiate_fx<Threedim::PCLToMesh2>(fx, ctx, key);
+#if defined(SCORE_HAS_SH4LT)
+  oscr::instantiate_fx<Threedim::Sh4ltMeshLoader>(fx, ctx, key);
+#endif
   auto add = instantiate_factories<
       score::ApplicationContext,
       FW<Process::ProcessModelFactory, Gfx::ModelDisplay::ProcessFactory>,

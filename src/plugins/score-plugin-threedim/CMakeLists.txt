@@ -91,3 +91,20 @@ target_include_directories(
 target_link_libraries(
   score_plugin_threedim PRIVATE score_plugin_engine score_plugin_avnd
                                 score_plugin_gfx fmt::fmt ssynth Eigen3::Eigen)
+
+# Optional sh4lt support for Sh4ltMeshLoader
+if(TARGET sh4lt)
+  target_sources(score_plugin_threedim
+    PRIVATE
+      Threedim/Sh4ltMeshLoader.hpp
+      Threedim/Sh4ltMeshLoader.cpp
+  )
+  target_link_libraries(score_plugin_threedim
+    PRIVATE
+      sh4lt
+  )
+  target_compile_definitions(score_plugin_threedim
+    PRIVATE
+      SCORE_HAS_SH4LT
+  )
+endif()

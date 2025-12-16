@@ -110,6 +110,7 @@ void Model::init()
     std::vector<std::pair<QString, ossia::value>> projmodes{
         {"Perspective", 0},
         {"Fulldome (1-pass)", 1},
+        {"Orthographic", 2},
     };
 
     m_inlets.push_back(
